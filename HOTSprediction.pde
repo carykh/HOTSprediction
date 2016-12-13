@@ -103,6 +103,7 @@ void draw(){
   //text("Input word:",20,236);
   //fill(0,0,255);
   //text(word.toUpperCase(),20,272);
+  text("Click & drag to change team heroes.",ex,1000);
   text("Expected output:",ex,1033);
   String o = percentify(desiredOutput,true);
   if(typing){
