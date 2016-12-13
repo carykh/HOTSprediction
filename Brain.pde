@@ -6,16 +6,13 @@ class Brain {
   boolean condenseLayerOne = true;
   int drawWidth = 5;
   double alpha = 0.1;
-  double confidence = 0.0;
-  String[] languages;
-  int topOutput = 0;
+  double result = 0;
   String[] heroNames = 
   {"Unknown","Abathur","Anub'arak","Arthas","Azmodan","Brightwing","Chen","Diablo","E.T.C.","Falstad","Gazlowe","Illidan","Jaina","Johanna","Kael'thas","Kerrigan","Kharazim","Leoric","Li Li","Malfurion","Muradin","Murky","Nazeebo","Nova","Raynor","Rehgar","Sgt. Hammer","Sonya","Stitches","Sylvanas","Tassadar","The Butcher","The Lost Vikings","Thrall","Tychus","Tyrael","Tyrande","Uther","Valla","Zagara","Zeratul","Rexxar","Lt. Morales","Artanis","Cho","Gall","Lunara","Greymane","Li-Ming","Xul","Dehaka","Tracer","Chromie","Medivh","Gul'dan","Auriel","Alarak","Zarya","Samuro","Varian","Ragnaros"};
   String[] mapNames = 
   {"Battlefield of Eternity","Blackheart's Bay","Cursed Hollow","Dragon Shire","Garden of Terror","Haunted Mines","Infernal Shrines","Sky Temple","Tomb of the Spider Queen","Towers of Doom","Lost Cavern","Braxis Holdout","Warhead Junction"};
-  Brain(int[] bls, String lang[]){
+  Brain(int[] bls){
     BRAIN_LAYER_SIZES = bls;
-    languages = lang;
     neurons = new double[BRAIN_LAYER_SIZES.length][];
     axons = new double[BRAIN_LAYER_SIZES.length-1][][];
     MAX_HEIGHT = 0;
@@ -93,7 +90,7 @@ class Brain {
         }
       }
     }
-    topOutput = getTopOutput();
+    result = neurons[2][0];
     if(!useInputs){
       return 0;
     }else{
@@ -108,24 +105,11 @@ class Brain {
   public double sigmoid(double input){
     return 1.0/(1.0+Math.pow(2.71828182846,-input));
   }
-  public int getTopOutput(){
-    double record = -1;
-    int recordHolder = -1;
-    int end = BRAIN_LAYER_SIZES.length-1;
-    for(int i = 0; i < BRAIN_LAYER_SIZES[end]-1; i++){
-      if(neurons[end][i] > record){
-        record = neurons[end][i];
-        recordHolder = i;
-      }
-    }
-    confidence = record;
-    return recordHolder;
-  }
   public void drawBrain(float scaleUp){
     final float neuronSize = 0.4;
     noStroke();
     fill(128);
-    rect(-0.5*scaleUp,-0.5*scaleUp,(BRAIN_LAYER_SIZES.length*drawWidth-1)*scaleUp,MAX_HEIGHT*scaleUp);
+    rect(-0.5*scaleUp,-0.5*scaleUp,(1+(BRAIN_LAYER_SIZES.length-1)*drawWidth)*scaleUp,MAX_HEIGHT*scaleUp);
     ellipseMode(RADIUS);
     strokeWeight(3);
     textAlign(CENTER);
@@ -145,50 +129,9 @@ class Brain {
           double val = neurons[0][y];
           noStroke();
           fill(255);
-          if(ay >= 1 && ay <= 61){
-            if(val >= 0.5){
-              fill(255,0,255);
-            }else if(val <= -0.5){
-              fill(0,255,255);
-            }
-          }
           ellipse(0,ay*scaleUp,neuronSize*scaleUp,neuronSize*scaleUp);
           fill(0);
-          String c = Math.round(val)+"";
-          if(ay == 0){
-            c = ""+y;
-          }else if(ay == 1+61+2){
-            c = "1";
-          }else if(ay >= 1+61){
-            c = coolify(val);
-          }
-          /*if(ay == 0){
-            c = ""+y;
-          }else if(ay == 31){
-            c = "1";
-          }else if(ay%3 == 1){
-            c = ""+((y-13)%63);
-          }else if(ay%3 == 0){
-            c = ""+Math.round(val*1000);
-          }*/
-          text(c,0,(ay+(neuronSize*0.55))*scaleUp);
-          String s = "";
-          if(ay == 0){
-            s = "Map("+mapNames[y]+")";
-          }else if(ay == 1+61){
-            s = "Team 1 MMR avg/10K";
-          }else if(ay == 2+61){
-            s = "Team 2 MMR avg/10K";
-          }else if(ay == 3+61){
-            s = "Bias";
-          }else{
-            s = heroNames[ay-1];
-          }
-          textAlign(RIGHT);
-          textFont(font,0.88*scaleUp);
-          text(s,-0.7*scaleUp,(apY(0,y)+(neuronSize*0.64))*scaleUp);
-          textFont(font,0.65*scaleUp);
-          textAlign(CENTER);
+          text("IN",0,(ay+(neuronSize*0.55))*scaleUp);
         }
       }
       startPosition = 1;
@@ -202,11 +145,6 @@ class Brain {
         fill(neuronTextColor(val));
         text(coolify(val),x*drawWidth*scaleUp,(apY(x,y)+(neuronSize*0.52))*scaleUp);
         fill(0);
-        if(x == BRAIN_LAYER_SIZES.length-1 && y < BRAIN_LAYER_SIZES[x]-1){
-          textAlign(LEFT);
-          text(languages[y],(x*drawWidth+0.7)*scaleUp,(apY(x,y)+(neuronSize*0.52))*scaleUp);
-          textAlign(CENTER);
-        }
       }
     }
   }
@@ -222,28 +160,14 @@ class Brain {
   }
   public void drawAxon(int x1, int y1, int x2, int y2, float scaleUp){
     double v = axons[x1][y1][y2]*neurons[x1][y1];
-    if(Math.abs(v) >= 0.001){
+    if(Math.abs(v) >= 0.001 && (x1 >= 1 || y1 < 13)){
       stroke(axonStrokeColor(axons[x1][y1][y2]));
       line(x1*drawWidth*scaleUp,apY(x1, y1)*scaleUp,x2*drawWidth*scaleUp,apY(x2, y2)*scaleUp);
     }
   }
   public int apY(int x, int y){
     if(condenseLayerOne && x == 0){
-      if(y < 13){ // the map type
-        return 0;
-        /*int placeWithinChunk = ((y-13)%63);
-        int chunkNumber = (y-13)/63;
-        if(placeWithinChunk < 61){ // hero type
-          return chunkNumber*3+1;
-        }else if(placeWithinChunk == 61){ // hero level
-          return chunkNumber*3+2;
-        }else if(placeWithinChunk == 62){ // mmr
-          return chunkNumber*3+3;
-        }*/
-      }else{
-        return y-13+1;
-      }
-      //return y/INPUTS_PER_CHAR;
+      return 0;
     }else{
       return y;
     }
