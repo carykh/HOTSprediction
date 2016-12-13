@@ -56,7 +56,7 @@ void draw(){
   }
   if(clickY >= 1 && clickY < INPUT_LAYER_HEIGHT-1){
     float change = mouseX-clickX;
-    brain.neurons[0][clickY+12] += change*0.004;
+    brain.neurons[0][clickY+12] += change*0.025;
     clickX = mouseX;
   }
   scale(WINDOW_SCALE_SIZE);
