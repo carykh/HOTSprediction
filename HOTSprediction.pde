@@ -1,10 +1,10 @@
 float WINDOW_SCALE_SIZE = 1.0;
 int MINIMUM_WORD_LENGTH = 5;
 float STARTING_AXON_VARIABILITY = 1.0;
-int TRAINS_PER_FRAME = 200;
+int TRAINS_PER_FRAME = 5000;
 PFont font;
 Brain brain;
-int MIDDLE_LAYER_NEURON_COUNT = 30;
+int MIDDLE_LAYER_NEURON_COUNT = 70;
 String[] trainingData;
 int SAMPLE_LENGTH = 10;
 //int INPUTS_PER_CHAR = 61+1+1; //hero type and MMR and hero level
@@ -17,7 +17,7 @@ boolean[] recentGuesses = new boolean[guessWindow];
 int recentRightCount = 0;
 boolean training = false;
 String word = "-";
-double desiredOutput = 0;
+int desiredOutput = 0;
 int lastPressedKey = -1;
 boolean typing = false;
 boolean lastOneWasCorrect = false;
@@ -27,6 +27,7 @@ String[] heroNames =
 {"Unknown","Abathur","Anub'arak","Arthas","Azmodan","Brightwing","Chen","Diablo","E.T.C.","Falstad","Gazlowe","Illidan","Jaina","Johanna","Kael'thas","Kerrigan","Kharazim","Leoric","Li Li","Malfurion","Muradin","Murky","Nazeebo","Nova","Raynor","Rehgar","Sgt. Hammer","Sonya","Stitches","Sylvanas","Tassadar","The Butcher","The Lost Vikings","Thrall","Tychus","Tyrael","Tyrande","Uther","Valla","Zagara","Zeratul","Rexxar","Lt. Morales","Artanis","Cho","Gall","Lunara","Greymane","Li-Ming","Xul","Dehaka","Tracer","Chromie","Medivh","Gul'dan","Auriel","Alarak","Zarya","Samuro","Varian","Ragnaros"};
 String[] mapNames = 
 {"Battlefield of Eternity","Blackheart's Bay","Cursed Hollow","Dragon Shire","Garden of Terror","Haunted Mines","Infernal Shrines","Sky Temple","Tomb of the Spider Queen","Towers of Doom","Lost Cavern","Braxis Holdout","Warhead Junction"};
+String[] outputs = {"Team blue wins","Team red wins"};
 void setup(){
   trainingData = loadStrings("heroLeagueOnlyData.txt");
   for(int i = 0; i < guessWindow; i++){
@@ -72,7 +73,7 @@ void draw(){
       training = false;
       typing = false;
       train();
-      brain.useBrainGetError(null, null,false,false); // to make the input run on the newest set of synapses
+      //brain.useBrainGetError(null, null,false,false); // to make the input run on the newest set of synapses
   }else if(c == 52 && lastPressedKey != 52){
       brain.alpha *= 2;
     }else if(c == 51 && lastPressedKey != 51){
@@ -86,7 +87,7 @@ void draw(){
     for(int i = 0; i < TRAINS_PER_FRAME; i++){
       train();
     }
-    brain.useBrainGetError(null, null,false,false); // to make the input run on the newest set of synapses
+    //brain.useBrainGetError(null, null,false,false); // to make the input run on the newest set of synapses
   }
   background(255);
   
