@@ -1,18 +1,21 @@
 float WINDOW_SCALE_SIZE = 1.0;
-int MINIMUM_WORD_LENGTH = 5;
+String fileName = "saveData.txt";
+boolean loadSavedFile = true;
+int MIDDLE_LAYER_NEURON_COUNT = 100;
+
 float STARTING_AXON_VARIABILITY = 1.0;
-int TRAINS_PER_FRAME = 5000;
+int TRAINS_PER_FRAME = 2000;
 PFont font;
 Brain brain;
-int MIDDLE_LAYER_NEURON_COUNT = 70;
+
 String[] trainingData;
 int SAMPLE_LENGTH = 10;
 //int INPUTS_PER_CHAR = 61+1+1; //hero type and MMR and hero level
-int INPUT_LAYER_HEIGHT = 13+61+2+1; //13+INPUTS_PER_CHAR*SAMPLE_LENGTH+1;
-int OUTPUT_LAYER_HEIGHT = 2;
+int INPUT_LAYER_HEIGHT = 13+61+2+18+1; //13+INPUTS_PER_CHAR*SAMPLE_LENGTH+1;
+int OUTPUT_LAYER_HEIGHT = 3;
 int lineAt = 0;
 int iteration = 0;
-int guessWindow = 10000;
+int guessWindow = 10000; // Don't change this in between file loads.
 boolean[] recentGuesses = new boolean[guessWindow];
 int recentRightCount = 0;
 boolean training = false;
@@ -28,17 +31,37 @@ String[] heroNames =
 String[] mapNames = 
 {"Battlefield of Eternity","Blackheart's Bay","Cursed Hollow","Dragon Shire","Garden of Terror","Haunted Mines","Infernal Shrines","Sky Temple","Tomb of the Spider Queen","Towers of Doom","Lost Cavern","Braxis Holdout","Warhead Junction"};
 String[] outputs = {"Team blue wins","Team red wins"};
+String[] heroStats = loadStrings("C:/Users/Cary/Documents/Processing/HOTSprediction2/data/heroStats.csv");
 void setup(){
   trainingData = loadStrings("heroLeagueOnlyData.txt");
   for(int i = 0; i < guessWindow; i++){
     recentGuesses[i] = false;
   }
   font = loadFont("Helvetica-Bold-96.vlw"); 
-  int[] bls = {INPUT_LAYER_HEIGHT,MIDDLE_LAYER_NEURON_COUNT,OUTPUT_LAYER_HEIGHT};
-  brain = new Brain(bls);
+  if(fileExists(fileName) && loadSavedFile){
+    String[] fileData = loadStrings(fileName);
+    iteration = Integer.parseInt(fileData[0]);
+    recentRightCount = 0;
+    for(int i = 0; i < fileData[1].length() ; i++){
+      if(fileData[1].charAt(i) == '1'){
+        recentGuesses[i] = true;
+        recentRightCount++;
+      }
+    }
+    String[] blsData = fileData[2].split(",");
+    int[] bls = {Integer.parseInt(blsData[0]),
+    Integer.parseInt(blsData[1]),
+    Integer.parseInt(blsData[2])};
+    brain = new Brain(bls,outputs,fileData,Double.parseDouble(blsData[3]));
+  }else{
+    int[] bls = {INPUT_LAYER_HEIGHT,MIDDLE_LAYER_NEURON_COUNT,OUTPUT_LAYER_HEIGHT};
+    brain = new Brain(bls,outputs,null,0.1);
+  }
   size((int)(1920*WINDOW_SCALE_SIZE),(int)(1080*WINDOW_SCALE_SIZE));
   frameRate(200);
-  train();
+  if(iteration == 0){
+    train();
+  }
 }
 
 void draw(){
@@ -74,10 +97,12 @@ void draw(){
       typing = false;
       train();
       //brain.useBrainGetError(null, null,false,false); // to make the input run on the newest set of synapses
-  }else if(c == 52 && lastPressedKey != 52){
+    }else if(c == 52 && lastPressedKey != 52){
       brain.alpha *= 2;
     }else if(c == 51 && lastPressedKey != 51){
       brain.alpha *= 0.5;
+    }else if(c == 53 && lastPressedKey != 53){
+      saveTheFile();
     }
     lastPressedKey = c;
   }else{
@@ -106,7 +131,7 @@ void draw(){
   //text(word.toUpperCase(),20,272);
   text("Click & drag to change team heroes.",ex,1000);
   text("Expected output:",ex,1033);
-  String o = percentify(desiredOutput,true);
+  String o = outputs[desiredOutput];
   if(typing){
     o = "???";
   }
@@ -183,9 +208,10 @@ void draw(){
       fill(255,0,0);
     }
   }
-  text(percentify(brain.result, true)+" ("+s+")",ex,66);
+  text(outputs[brain.topOutput]+" ("+s+")",ex,66);
   fill(0);
   
+  text("Confidence: "+percentify(brain.confidence,false),ex,100);
   text("% of last "+guessWindow+" correct:",ex,133);
   text(percentify(((float)recentRightCount)/min(iteration,guessWindow), false),ex,166);
   text("Step size:",ex,233);
@@ -194,10 +220,39 @@ void draw(){
   text("2 to do one training.",ex,366);
   text("3 to decrease step size.",ex,400);
   text("4 to increase step size.",ex,433);
+  text("5 to save file.",ex,466);
+  text("To restart training, delete or",ex,533);
+  text("rename the saveData.txt file",ex,566);
+  text("OR set loadSavedFile to false.",ex,600);
+  text("(But it set it to true when you",ex,633);
+  text("want to load it again.)",ex,666);
   
-  translate(800,40);
-  brain.drawBrain(BRAIN_DRAW_SIZE);
+  text("Axons from most of the input nodes",ex,733);
+  text("to the hidden layer exist, but aren't",ex,766);
+  text("drawn to speed up rendering speed.",ex,800);
+  translate(930,40);
+  brain.drawBrain(BRAIN_DRAW_SIZE, heroStats);
   lineAt++;
+}
+boolean fileExists(String fileName) {
+  File f = new File(dataPath(fileName));
+  return (f.exists());
+}
+void saveTheFile(){
+  PrintWriter output = createWriter("data/"+fileName);
+  output.println(iteration);
+  for(int i = 0; i < guessWindow; i++){
+    String c = "0";
+    if(recentGuesses[i]){
+      c = "1";
+    }
+    output.print(c);
+  }
+  output.println("");
+  output.println(brain.brainToString());
+  output.flush();
+  output.close();
+  println("File saved at iteration "+iteration+"! :)");
 }
 void mousePressed(){
   clickSquare = getClickSquare();
@@ -205,7 +260,8 @@ void mousePressed(){
 }
 void mouseReleased(){
   clickSquare = -1;
-  brain.useBrainGetError(null, null,false,false);
+  setExtraHeroStuff();
+  brain.useBrainGetError(null,false,false);
 }
 void setClickMap(){
   if(clickSquare >= 0 && clickSquare < 13){
@@ -220,7 +276,8 @@ void setClickMap(){
   }
 }
 void updateBrainWithManualInput(){
-  brain.useBrainGetError(null, null,false,false);
+  setExtraHeroStuff();
+  brain.useBrainGetError(null,false,false);
   typing = true;
 }
 int getMapType(){
@@ -242,10 +299,10 @@ int getClickSquare(){
 void train(){
   int choiceLine = (int)(random(0,trainingData.length));
   String[] parts = trainingData[choiceLine].split(" ");
-  desiredOutput = Double.parseDouble(parts[1]);
+  desiredOutput = Integer.parseInt(parts[1]);
   word = parts[0];
   double error = getBrainErrorFromLine(word,desiredOutput,true);
-  if((brain.result >= 0.50) == (desiredOutput >= 0.50)){
+  if(brain.topOutput == desiredOutput){
     if(!recentGuesses[iteration%guessWindow]){
       recentRightCount++;
     }
@@ -271,28 +328,44 @@ String percentify(double d, boolean withTeam){
   return nf((float)(d*100),0,2)+"%"+s;
 }
 double getBrainErrorFromLine(String word, double desiredOutput, boolean train){
-  double inputs[] = new double[INPUT_LAYER_HEIGHT];
   for(int i = 0; i < INPUT_LAYER_HEIGHT; i++){
-    inputs[i] = 0;
+    brain.neurons[0][i] = 0;
   }
-  inputs[getIntAt(word,0)] = 1;
+  brain.neurons[0][getIntAt(word,0)] = 1;
   int[] totalMMRs = {0,0};
   for(int i = 0; i < SAMPLE_LENGTH; i++){
     int heroID = getIntAt(word,1+i*4);
     int heroLevel = getIntAt(word,2+i*4);
     int MMR = getIntAt(word,3+i*4)*90+getIntAt(word,4+i*4);
-    inputs[13+heroID] = -1+2*(i/5);
+    brain.neurons[0][13+heroID] = -1+2*(i/5);
     totalMMRs[i/5] += MMR;
   }
-  inputs[13+61] = totalMMRs[0]/5.0/5000.0;
-  inputs[13+61+1] = totalMMRs[1]/5.0/5000.0;
+  brain.neurons[0][13+61] = totalMMRs[0]/5.0/5000.0;
+  brain.neurons[0][13+61+1] = totalMMRs[1]/5.0/5000.0;
   double desiredOutputs[] = new double[OUTPUT_LAYER_HEIGHT];
-  desiredOutputs[0] = desiredOutput;
-  desiredOutputs[1] = 0;
+  desiredOutputs[0] = 1-desiredOutput;
+  desiredOutputs[1] = desiredOutput;
+  desiredOutputs[2] = 0;
   if(train){
     iteration++;
   }
-  return brain.useBrainGetError(inputs, desiredOutputs,train,true);
+  setExtraHeroStuff();
+  return brain.useBrainGetError(desiredOutputs,train,true);
+}
+void setExtraHeroStuff(){
+  for(int i = 13+61+2; i < 13+61+2+18; i++){
+    brain.neurons[0][i] = 0;
+  }
+  for(int heroID = 13+1; heroID < 13+61; heroID++){ //skip unknown
+    if(Math.abs(brain.neurons[0][heroID]) >= 0.5){ // is on a team
+      int teamNumber = (int)((brain.neurons[0][heroID]+2.0)/2.0);
+      String[] splitStats = heroStats[heroID-12].split(",");
+      for(int i = 0; i < 9; i++){
+        Double value = Double.parseDouble(splitStats[i+2]);
+        brain.neurons[0][13+61+2+i+9*teamNumber] += value/5.0; // Divide by 5 because it' an average.
+      }
+    }
+  }
 }
 int getIntAt(String word, int index){
   return (int)word.charAt(index)-33;

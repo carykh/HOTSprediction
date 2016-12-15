@@ -5,17 +5,17 @@ class Brain {
   int MAX_HEIGHT;
   boolean condenseLayerOne = true;
   int drawWidth = 5;
-  double alpha = 0.1;
-  double result = 0;
-  String[] heroNames = 
-  {"Unknown","Abathur","Anub'arak","Arthas","Azmodan","Brightwing","Chen","Diablo","E.T.C.","Falstad","Gazlowe","Illidan","Jaina","Johanna","Kael'thas","Kerrigan","Kharazim","Leoric","Li Li","Malfurion","Muradin","Murky","Nazeebo","Nova","Raynor","Rehgar","Sgt. Hammer","Sonya","Stitches","Sylvanas","Tassadar","The Butcher","The Lost Vikings","Thrall","Tychus","Tyrael","Tyrande","Uther","Valla","Zagara","Zeratul","Rexxar","Lt. Morales","Artanis","Cho","Gall","Lunara","Greymane","Li-Ming","Xul","Dehaka","Tracer","Chromie","Medivh","Gul'dan","Auriel","Alarak","Zarya","Samuro","Varian","Ragnaros"};
-  String[] mapNames = 
-  {"Battlefield of Eternity","Blackheart's Bay","Cursed Hollow","Dragon Shire","Garden of Terror","Haunted Mines","Infernal Shrines","Sky Temple","Tomb of the Spider Queen","Towers of Doom","Lost Cavern","Braxis Holdout","Warhead Junction"};
-  Brain(int[] bls){
+  double alpha;
+  int topOutput = 0;
+  double confidence = 0.0;
+  String[] outputs;
+  Brain(int[] bls, String[] o, String[] fileData, double inputAlpha){
+    outputs = o;
     BRAIN_LAYER_SIZES = bls;
     neurons = new double[BRAIN_LAYER_SIZES.length][];
     axons = new double[BRAIN_LAYER_SIZES.length-1][][];
     MAX_HEIGHT = 0;
+    int lineProgress = 3;
     for(int x = 0; x < BRAIN_LAYER_SIZES.length; x++){
       if(BRAIN_LAYER_SIZES[x] > MAX_HEIGHT){
         MAX_HEIGHT = BRAIN_LAYER_SIZES[x];
@@ -33,19 +33,22 @@ class Brain {
         for(int y = 0; y < BRAIN_LAYER_SIZES[x]; y++){
           axons[x][y] = new double[BRAIN_LAYER_SIZES[x+1]-1];
           for(int z = 0; z < BRAIN_LAYER_SIZES[x+1]-1; z++){
-            double startingWeight = (Math.random()*2-1)*STARTING_AXON_VARIABILITY;
-            axons[x][y][z] = startingWeight;
+            if(fileData != null){
+              axons[x][y][z] = Double.parseDouble(fileData[lineProgress]);
+              lineProgress++;
+            }else{
+              double startingWeight = (Math.random()*2-1)*STARTING_AXON_VARIABILITY;
+              axons[x][y][z] = startingWeight;
+            }
           }
         }
       }
     }
+    alpha = inputAlpha;
   }
-  public double useBrainGetError(double[] inputs, double desiredOutputs[], boolean mutate, boolean useInputs){
+  public double useBrainGetError(double desiredOutputs[], boolean mutate, boolean useInputs){
     int[] nonzero = {BRAIN_LAYER_SIZES[0]-1};
     for(int i = 0; i < BRAIN_LAYER_SIZES[0]; i++){
-      if(useInputs){
-        neurons[0][i] = inputs[i];
-      }
       if (neurons[0][i] != 0){
         nonzero = append(nonzero, i);
       }
@@ -70,7 +73,6 @@ class Brain {
       }
     }
     if(mutate){
-      
       for(int y = 0; y < nonzero.length; y++){
         for(int z = 0; z < BRAIN_LAYER_SIZES[1]-1; z++){
           double delta = 0;
@@ -89,8 +91,15 @@ class Brain {
           axons[1][y][z] -= delta;
         }
       }
+      /*for(int y = 0; y < nonzero.length; y++){ // make the hero ID synapses not count.
+        for(int z = 0; z < BRAIN_LAYER_SIZES[1]-1; z++){
+          if(nonzero[y] >= 13 && nonzero[y] < 61){
+            axons[0][nonzero[y]][z] = 0.0;
+          }
+        }
+      }*/
     }
-    result = neurons[2][0];
+    topOutput = getTopOutput();
     if(!useInputs){
       return 0;
     }else{
@@ -102,10 +111,25 @@ class Brain {
       return totalError/(BRAIN_LAYER_SIZES[end]-1);
     }
   }
+  public int getTopOutput(){
+    double record = -1;
+    int recordHolder = -1;
+    int end = BRAIN_LAYER_SIZES.length-1;
+    for(int i = 0; i < BRAIN_LAYER_SIZES[end]-1; i++){
+      if(neurons[end][i] > record){
+        record = neurons[end][i];
+        recordHolder = i;
+      }
+    }
+    confidence = record;
+    return recordHolder;
+  }
   public double sigmoid(double input){
     return 1.0/(1.0+Math.pow(2.71828182846,-input));
   }
-  public void drawBrain(float scaleUp){
+  public void drawBrain(float scaleUp, String[] heroStats){
+    String[] parts = heroStats[0].split(",");
+    String[] col = {"Blue","Red"};
     final float neuronSize = 0.4;
     noStroke();
     fill(128);
@@ -113,7 +137,7 @@ class Brain {
     ellipseMode(RADIUS);
     strokeWeight(3);
     textAlign(CENTER);
-    textFont(font,0.65*scaleUp);
+    textFont(font,0.58*scaleUp);
     for(int x = 0; x < BRAIN_LAYER_SIZES.length-1; x++){
       for(int y = 0; y < BRAIN_LAYER_SIZES[x]; y++){
         for(int z = 0; z < BRAIN_LAYER_SIZES[x+1]-1; z++){
@@ -131,7 +155,27 @@ class Brain {
           fill(255);
           ellipse(0,ay*scaleUp,neuronSize*scaleUp,neuronSize*scaleUp);
           fill(0);
-          text("IN",0,(ay+(neuronSize*0.55))*scaleUp);
+          String s = "IN";
+          if(ay == 19){
+            fill(255);
+            ellipse(0,ay*scaleUp,neuronSize*scaleUp,neuronSize*scaleUp);
+            fill(0);
+            text("1",0,(ay+(neuronSize*0.55))*scaleUp);
+          }else if(ay >= 1){
+            fill(neuronFillColor(val));
+            ellipse(0,ay*scaleUp,neuronSize*scaleUp,neuronSize*scaleUp);
+            fill(neuronTextColor(val));
+            text(nf((float)(val),0,1),0,(ay+(neuronSize*0.55))*scaleUp);
+            fill(0);
+            textAlign(RIGHT);
+            text(col[(ay-1)/9]+" avg "+parts[(ay-1)%9+2],-0.7*scaleUp,(ay+(neuronSize*0.55))*scaleUp);
+            textAlign(CENTER);
+          }else{
+            fill(255);
+            ellipse(0,ay*scaleUp,neuronSize*scaleUp,neuronSize*scaleUp);
+            fill(0);
+            text("IN",0,(ay+(neuronSize*0.55))*scaleUp);
+          }
         }
       }
       startPosition = 1;
@@ -145,6 +189,11 @@ class Brain {
         fill(neuronTextColor(val));
         text(coolify(val),x*drawWidth*scaleUp,(apY(x,y)+(neuronSize*0.52))*scaleUp);
         fill(0);
+        if(y < 2 && x == 2){
+          textAlign(LEFT);
+          text(outputs[y],(0.7+x*drawWidth)*scaleUp,(y+(neuronSize*0.55))*scaleUp);
+          textAlign(CENTER);
+        }
       }
     }
   }
@@ -160,14 +209,14 @@ class Brain {
   }
   public void drawAxon(int x1, int y1, int x2, int y2, float scaleUp){
     double v = axons[x1][y1][y2]*neurons[x1][y1];
-    if(Math.abs(v) >= 0.001 && (x1 >= 1 || y1 < 13)){
+    if(Math.abs(v) >= 0.001 && (x1 >= 1 || y1 < 13/* || y1 >= 13+61+2*/)){
       stroke(axonStrokeColor(axons[x1][y1][y2]));
       line(x1*drawWidth*scaleUp,apY(x1, y1)*scaleUp,x2*drawWidth*scaleUp,apY(x2, y2)*scaleUp);
     }
   }
   public int apY(int x, int y){
     if(condenseLayerOne && x == 0){
-      return 0;
+      return max(0,y-(13+61+2)+1);
     }else{
       return y;
     }
@@ -188,5 +237,16 @@ class Brain {
     }else{
       return color(255,255,255);
     }
+  }
+  String brainToString(){
+    String result = INPUT_LAYER_HEIGHT+","+MIDDLE_LAYER_NEURON_COUNT+","+OUTPUT_LAYER_HEIGHT+","+alpha;
+    for(int x = 0; x < BRAIN_LAYER_SIZES.length-1; x++){
+      for(int y = 0; y < BRAIN_LAYER_SIZES[x]; y++){
+        for(int z = 0; z < BRAIN_LAYER_SIZES[x+1]-1; z++){
+          result = result+"\n"+axons[x][y][z];
+        }
+      }
+    }
+    return result;
   }
 }
