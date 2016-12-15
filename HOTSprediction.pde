@@ -31,9 +31,10 @@ String[] heroNames =
 String[] mapNames = 
 {"Battlefield of Eternity","Blackheart's Bay","Cursed Hollow","Dragon Shire","Garden of Terror","Haunted Mines","Infernal Shrines","Sky Temple","Tomb of the Spider Queen","Towers of Doom","Lost Cavern","Braxis Holdout","Warhead Junction"};
 String[] outputs = {"Team blue wins","Team red wins"};
-String[] heroStats = loadStrings("C:/Users/Cary/Documents/Processing/HOTSprediction2/data/heroStats.csv");
+String[] heroStats;
 void setup(){
   trainingData = loadStrings("heroLeagueOnlyData.txt");
+  heroStats = loadStrings("heroStats.csv");
   for(int i = 0; i < guessWindow; i++){
     recentGuesses[i] = false;
   }
