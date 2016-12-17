@@ -1,3 +1,7 @@
+import java.util.Date;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+
 float WINDOW_SCALE_SIZE = 1.0;
 String fileName = "saveData.txt";
 boolean loadSavedFile = true;
@@ -32,6 +36,8 @@ String[] mapNames =
 {"Battlefield of Eternity","Blackheart's Bay","Cursed Hollow","Dragon Shire","Garden of Terror","Haunted Mines","Infernal Shrines","Sky Temple","Tomb of the Spider Queen","Towers of Doom","Lost Cavern","Braxis Holdout","Warhead Junction"};
 String[] outputs = {"Team blue wins","Team red wins"};
 String[] heroStats;
+String lastSaveTime = "";
+Boolean saveFileNextFrame = false;
 void setup(){
   trainingData = loadStrings("heroLeagueOnlyData.txt");
   heroStats = loadStrings("heroStats.csv");
@@ -50,9 +56,10 @@ void setup(){
       }
     }
     String[] blsData = fileData[2].split(",");
-    int[] bls = {Integer.parseInt(blsData[0]),
-    Integer.parseInt(blsData[1]),
-    Integer.parseInt(blsData[2])};
+    INPUT_LAYER_HEIGHT = Integer.parseInt(blsData[0]);
+    MIDDLE_LAYER_NEURON_COUNT = Integer.parseInt(blsData[1]);
+    OUTPUT_LAYER_HEIGHT = Integer.parseInt(blsData[2]);
+    int[] bls = {INPUT_LAYER_HEIGHT,MIDDLE_LAYER_NEURON_COUNT,OUTPUT_LAYER_HEIGHT};
     brain = new Brain(bls,outputs,fileData,Double.parseDouble(blsData[3]));
   }else{
     int[] bls = {INPUT_LAYER_HEIGHT,MIDDLE_LAYER_NEURON_COUNT,OUTPUT_LAYER_HEIGHT};
@@ -66,6 +73,10 @@ void setup(){
 }
 
 void draw(){
+  if(saveFileNextFrame){
+    saveTheFile();
+    saveFileNextFrame = false;
+  }
   if(clickSquare >= 0){
     int nextCS = getClickSquare();
     if(clickSquare != nextCS){
@@ -103,7 +114,7 @@ void draw(){
     }else if(c == 51 && lastPressedKey != 51){
       brain.alpha *= 0.5;
     }else if(c == 53 && lastPressedKey != 53){
-      saveTheFile();
+      saveFileNextFrame = true;
     }
     lastPressedKey = c;
   }else{
@@ -122,7 +133,17 @@ void draw(){
   fill(0);
   textFont(font,33);
   textAlign(LEFT);
-  text("Heroes of the Storm Neural Net",ex,33);
+  fill(0);
+  String headerText = "Heroes of the Storm Neural Net";
+  if(saveFileNextFrame){
+    fill(0,170,0);
+    headerText = "HOST NN (SAVING FILE (check output))";
+  }else if(training){
+    fill(255,0,0);
+    headerText = "HOST NN (TRAINING HARD, "+TRAINS_PER_FRAME+" trains per frame)";
+  }
+  text(headerText,ex,33);
+  fill(0);
   text("Question: What is Team Blue's",ex,66);
   text("chance of winning?",ex,100);
   
@@ -227,10 +248,12 @@ void draw(){
   text("OR set loadSavedFile to false.",ex,600);
   text("(But it set it to true when you",ex,633);
   text("want to load it again.)",ex,666);
+  text("LAST FILE SAVE WAS AT:",ex,733);
+  text(lastSaveTime,ex,766);
   
-  text("Axons from most of the input nodes",ex,733);
-  text("to the hidden layer exist, but aren't",ex,766);
-  text("drawn to speed up rendering speed.",ex,800);
+  text("Axons from most of the input nodes",ex,833);
+  text("to the hidden layer exist, but aren't",ex,866);
+  text("drawn to speed up rendering speed.",ex,900);
   translate(930,40);
   brain.drawBrain(BRAIN_DRAW_SIZE, heroStats);
   lineAt++;
@@ -253,7 +276,10 @@ void saveTheFile(){
   output.println(brain.brainToString());
   output.flush();
   output.close();
-  println("File saved at iteration "+iteration+"! :)");
+  
+  DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+  Date date = new Date();
+  lastSaveTime = dateFormat.format(date);
 }
 void mousePressed(){
   clickSquare = getClickSquare();

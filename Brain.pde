@@ -9,6 +9,8 @@ class Brain {
   int topOutput = 0;
   double confidence = 0.0;
   String[] outputs;
+  int[] MAX_NEURONS_DRAWN_PER_LAYER = {100,31,31};
+  int axonCount = 0;
   Brain(int[] bls, String[] o, String[] fileData, double inputAlpha){
     outputs = o;
     BRAIN_LAYER_SIZES = bls;
@@ -32,6 +34,7 @@ class Brain {
         axons[x] = new double[BRAIN_LAYER_SIZES[x]][];
         for(int y = 0; y < BRAIN_LAYER_SIZES[x]; y++){
           axons[x][y] = new double[BRAIN_LAYER_SIZES[x+1]-1];
+          axonCount += BRAIN_LAYER_SIZES[x+1]-1;
           for(int z = 0; z < BRAIN_LAYER_SIZES[x+1]-1; z++){
             if(fileData != null){
               axons[x][y][z] = Double.parseDouble(fileData[lineProgress]);
@@ -139,15 +142,15 @@ class Brain {
     textAlign(CENTER);
     textFont(font,0.58*scaleUp);
     for(int x = 0; x < BRAIN_LAYER_SIZES.length-1; x++){
-      for(int y = 0; y < BRAIN_LAYER_SIZES[x]; y++){
-        for(int z = 0; z < BRAIN_LAYER_SIZES[x+1]-1; z++){
+      for(int y = 0; y < min(MAX_NEURONS_DRAWN_PER_LAYER[x], BRAIN_LAYER_SIZES[x]); y++){
+        for(int z = 0; z < min(MAX_NEURONS_DRAWN_PER_LAYER[x+1], BRAIN_LAYER_SIZES[x+1]-1); z++){
           drawAxon(x,y,x+1,z,scaleUp);
         }
       }
     }
     int startPosition = 0;
     if(condenseLayerOne){
-      for(int y = 0; y < BRAIN_LAYER_SIZES[0]; y++){
+      for(int y = 0; y < min(MAX_NEURONS_DRAWN_PER_LAYER[0], BRAIN_LAYER_SIZES[0]); y++){
         int ay = apY(0,y);
         if(neurons[0][y] >= 0.5 || ay >= 1){
           double val = neurons[0][y];
@@ -181,7 +184,7 @@ class Brain {
       startPosition = 1;
     }
     for(int x = startPosition; x < BRAIN_LAYER_SIZES.length; x++){
-      for(int y = 0; y < BRAIN_LAYER_SIZES[x]; y++){
+      for(int y = 0; y < min(MAX_NEURONS_DRAWN_PER_LAYER[x], BRAIN_LAYER_SIZES[x]); y++){
         noStroke();
         double val = neurons[x][y];
         fill(neuronFillColor(val));
@@ -239,11 +242,16 @@ class Brain {
     }
   }
   String brainToString(){
+    int axonsSaved = 0;
     String result = INPUT_LAYER_HEIGHT+","+MIDDLE_LAYER_NEURON_COUNT+","+OUTPUT_LAYER_HEIGHT+","+alpha;
     for(int x = 0; x < BRAIN_LAYER_SIZES.length-1; x++){
       for(int y = 0; y < BRAIN_LAYER_SIZES[x]; y++){
         for(int z = 0; z < BRAIN_LAYER_SIZES[x+1]-1; z++){
           result = result+"\n"+axons[x][y][z];
+          axonsSaved ++;
+          if(axonsSaved%500==0){
+            println(nf((100.0*axonsSaved)/axonCount,0,2)+"% done");
+          }
         }
       }
     }
