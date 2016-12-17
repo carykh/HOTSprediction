@@ -241,20 +241,19 @@ class Brain {
       return color(255,255,255);
     }
   }
-  String brainToString(){
+  void printBrain(PrintWriter output){
     int axonsSaved = 0;
-    String result = INPUT_LAYER_HEIGHT+","+MIDDLE_LAYER_NEURON_COUNT+","+OUTPUT_LAYER_HEIGHT+","+alpha;
+    output.print(INPUT_LAYER_HEIGHT+","+MIDDLE_LAYER_NEURON_COUNT+","+OUTPUT_LAYER_HEIGHT+","+alpha);
     for(int x = 0; x < BRAIN_LAYER_SIZES.length-1; x++){
       for(int y = 0; y < BRAIN_LAYER_SIZES[x]; y++){
         for(int z = 0; z < BRAIN_LAYER_SIZES[x+1]-1; z++){
-          result = result+"\n"+axons[x][y][z];
+          output.print("\n"+axons[x][y][z]);
           axonsSaved ++;
-          if(axonsSaved%500==0){
+          if(axonsSaved%1000==0){
             println(nf((100.0*axonsSaved)/axonCount,0,2)+"% done");
           }
         }
       }
     }
-    return result;
   }
 }

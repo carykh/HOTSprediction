@@ -273,7 +273,7 @@ void saveTheFile(){
     output.print(c);
   }
   output.println("");
-  output.println(brain.brainToString());
+  brain.printBrain(output);
   output.flush();
   output.close();
   
