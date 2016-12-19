@@ -103,7 +103,7 @@ class Brain {
       }*/
     }
     topOutput = getTopOutput();
-    if(!useInputs){
+    if(desiredOutputs == null){
       return 0;
     }else{
       double totalError = 0;

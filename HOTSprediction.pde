@@ -78,16 +78,6 @@ void draw(){
     saveFileNextFrame = false;
   }
   if(clickSquare >= 0){
-    int nextCS = getClickSquare();
-    if(clickSquare != nextCS){
-      if(nextCS >= 15 && nextCS < 15+61 && 
-      clickSquare >= 15 && clickSquare < 15+61){
-        double ph = brain.neurons[0][clickSquare-2];
-        brain.neurons[0][clickSquare-2] = brain.neurons[0][nextCS-2];
-        brain.neurons[0][nextCS-2] = ph;
-        updateBrainWithManualInput();
-      }
-    }
     if(clickSquare >= 80 && clickSquare < 85){
       brain.neurons[0][13+61] = min(max((mouseX-5)/630.0,0),1);
       updateBrainWithManualInput();
@@ -95,8 +85,6 @@ void draw(){
       brain.neurons[0][13+61+1] = min(max((mouseX-5)/630.0,0),1);
       updateBrainWithManualInput();
     }
-    clickSquare = nextCS;
-    setClickMap();
   }
   scale(WINDOW_SCALE_SIZE);
   if(keyPressed){
@@ -115,6 +103,18 @@ void draw(){
       brain.alpha *= 0.5;
     }else if(c == 53 && lastPressedKey != 53){
       saveFileNextFrame = true;
+    }else if(c == 54 && lastPressedKey != 54){
+      int currentBlueCount = getColorCount(0);
+      while(currentBlueCount < 5){
+        setBestHero(0);
+        currentBlueCount++;
+      }
+    }else if(c == 55 && lastPressedKey != 55){
+      int currentRedCount = getColorCount(1);
+      while(currentRedCount < 5){
+        setBestHero(1);
+        currentRedCount++;
+      }
     }
     lastPressedKey = c;
   }else{
@@ -243,17 +243,21 @@ void draw(){
   text("3 to decrease step size.",ex,400);
   text("4 to increase step size.",ex,433);
   text("5 to save file.",ex,466);
-  text("To restart training, delete or",ex,533);
-  text("rename the saveData.txt file",ex,566);
-  text("OR set loadSavedFile to false.",ex,600);
-  text("(But it set it to true when you",ex,633);
-  text("want to load it again.)",ex,666);
-  text("LAST FILE SAVE WAS AT:",ex,733);
-  text(lastSaveTime,ex,766);
+  text("6 to fill out Blue' team",ex,500);
+  text("with the best heroes",ex,533);
+  text("7 to fill out Blue' team",ex,566);
+  text("with the best heroes",ex,600);
+  text("To restart training, delete or",ex,666);
+  text("rename the saveData.txt file",ex,700);
+  text("OR set loadSavedFile to false.",ex,733);
+  text("(But it set it to true when you",ex,766);
+  text("want to load it again.)",ex,800);
+  text("LAST FILE SAVE WAS AT:",ex,866);
+  text(lastSaveTime,ex,900);
   
-  text("Axons from most of the input nodes",ex,833);
-  text("to the hidden layer exist, but aren't",ex,866);
-  text("drawn to speed up rendering speed.",ex,900);
+  text("Axons from most of the input nodes",ex,966);
+  text("to the hidden layer exist, but aren't",ex,1000);
+  text("drawn to speed up rendering speed.",ex,1033);
   translate(930,40);
   brain.drawBrain(BRAIN_DRAW_SIZE, heroStats);
   lineAt++;
@@ -281,8 +285,44 @@ void saveTheFile(){
   Date date = new Date();
   lastSaveTime = dateFormat.format(date);
 }
+int getColorCount(int team){
+  int count = 0;
+  for(int i = 13; i < 13+61; i++){
+    if(team == 0 && brain.neurons[0][i] <= -0.5){
+      count++;
+    }
+    if(team == 1 && brain.neurons[0][i] >= 0.5){
+      count++;
+    }
+  }
+  return count;
+}
+void setBestHero(int team){
+  double toChangeTo = team*2-1;
+  
+  int heroChoice = -1;
+  double recordDistanceFromGoal = 9999;
+  for(int i = 13; i < 13+61; i++){
+    if(Math.abs(brain.neurons[0][i]) <= 0.5){
+      brain.neurons[0][i] = toChangeTo;
+      double errorResult = brain.useBrainGetError(null,false,false);
+      if(errorResult < recordDistanceFromGoal){
+        recordDistanceFromGoal = errorResult;
+        heroChoice = i;
+      }
+      brain.neurons[0][i] = 0; // undo the edit
+    }
+  }
+  brain.neurons[0][heroChoice] = toChangeTo;
+}
 void mousePressed(){
   clickSquare = getClickSquare();
+  if(clickSquare >= 15){
+    brain.neurons[0][clickSquare-2]++;
+    if(brain.neurons[0][clickSquare-2] >= 1.5){
+      brain.neurons[0][clickSquare-2] -= 3;
+    }
+  }
   setClickMap();
 }
 void mouseReleased(){
