@@ -104,17 +104,25 @@ void draw(){
     }else if(c == 53 && lastPressedKey != 53){
       saveFileNextFrame = true;
     }else if(c == 54 && lastPressedKey != 54){
+      clearHeroType(0);
+      typing = true;
+    }else if(c == 55 && lastPressedKey != 55){
+      clearHeroType(1);
+      typing = true;
+    }else if(c == 56 && lastPressedKey != 56){
       int currentBlueCount = getColorCount(0);
       while(currentBlueCount < 5){
         setBestHero(0);
         currentBlueCount++;
       }
-    }else if(c == 55 && lastPressedKey != 55){
+      typing = true;
+    }else if(c == 57 && lastPressedKey != 57){
       int currentRedCount = getColorCount(1);
       while(currentRedCount < 5){
         setBestHero(1);
         currentRedCount++;
       }
+      typing = true;
     }
     lastPressedKey = c;
   }else{
@@ -236,17 +244,19 @@ void draw(){
   text("Confidence: "+percentify(brain.confidence,false),ex,100);
   text("% of last "+guessWindow+" correct:",ex,133);
   text(percentify(((float)recentRightCount)/min(iteration,guessWindow), false),ex,166);
-  text("Step size:",ex,233);
-  text(nf((float)(brain.alpha),0,4),ex,266);
-  text("1 to toggle training.",ex,333);
-  text("2 to do one training.",ex,366);
-  text("3 to decrease step size.",ex,400);
-  text("4 to increase step size.",ex,433);
-  text("5 to save file.",ex,466);
-  text("6 to fill out Blue' team",ex,500);
-  text("with the best heroes",ex,533);
-  text("7 to fill out Blue' team",ex,566);
-  text("with the best heroes",ex,600);
+  text("Step size: "+nf((float)(brain.alpha),0,4),ex,200);
+  
+  text("1 to toggle training.",ex,266);
+  text("2 to do one training.",ex,300);
+  text("3 to decrease step size.",ex,333);
+  text("4 to increase step size.",ex,366);
+  text("5 to save file.",ex,400);
+  text("6 to clear Blue's heroes.",ex,433);
+  text("7 to clear Red's heroes.",ex,466);
+  text("8 to fill out Blue's team with the best",ex,500);
+  text("heroes (have <5 heroes selected first)",ex,533);
+  text("9 to fill out Red's team with the best",ex,566);
+  text("heroes (have <5 heroes selected first)",ex,600);
   text("To restart training, delete or",ex,666);
   text("rename the saveData.txt file",ex,700);
   text("OR set loadSavedFile to false.",ex,733);
@@ -297,15 +307,26 @@ int getColorCount(int team){
   }
   return count;
 }
+void clearHeroType(int team){
+  for(int i = 13; i < 13+61; i++){
+    if(team == 0 && brain.neurons[0][i] <= -0.5){
+      brain.neurons[0][i] = 0;
+    }
+    if(team == 1 && brain.neurons[0][i] >= 0.5){
+      brain.neurons[0][i] = 0;
+    }
+  }
+}
 void setBestHero(int team){
   double toChangeTo = team*2-1;
   
   int heroChoice = -1;
   double recordDistanceFromGoal = 9999;
+  double[] desiredOutputs = {1-team,team};
   for(int i = 13; i < 13+61; i++){
     if(Math.abs(brain.neurons[0][i]) <= 0.5){
       brain.neurons[0][i] = toChangeTo;
-      double errorResult = brain.useBrainGetError(null,false,false);
+      double errorResult = brain.useBrainGetError(desiredOutputs,false,false);
       if(errorResult < recordDistanceFromGoal){
         recordDistanceFromGoal = errorResult;
         heroChoice = i;
